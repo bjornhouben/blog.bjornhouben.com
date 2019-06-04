@@ -1,0 +1,148 @@
+﻿<?xml version="1.0" encoding="utf-8"?><ManagementPack ContentReadable="true" SchemaVersion="2.0" OriginalSchemaVersion="1.1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+  <Manifest>
+    <Identity>
+      <ID>BjornTasksPowershell</ID>
+      <Version>1.0.0.0</Version>
+    </Identity>
+    <Name>Bjorn_Tasks_Powershell</Name>
+    <References>
+      <Reference Alias="SystemCenter">
+        <ID>Microsoft.SystemCenter.Library</ID>
+        <Version>7.0.8430.0</Version>
+        <PublicKeyToken>31bf3856ad364e35</PublicKeyToken>
+      </Reference>
+      <Reference Alias="System">
+        <ID>System.Library</ID>
+        <Version>7.5.8501.0</Version>
+        <PublicKeyToken>31bf3856ad364e35</PublicKeyToken>
+      </Reference>
+    </References>
+  </Manifest>
+  <Monitoring>
+    <Tasks>
+      <Task ID="ConsoleTaskGeneratedByUI80cdf41ce7554e88bf9739c0756c00dc" Accessibility="Public" Enabled="true" Target="SystemCenter!Microsoft.SystemCenter.ManagedComputer" Timeout="300" Remotable="true">
+        <Category>Custom</Category>
+        <WriteAction ID="PA" TypeID="System!System.CommandExecuter">
+          <ApplicationName>%systemroot%\System32\windowspowershell\v1.0\powershell.exe</ApplicationName>
+          <WorkingDirectory>%MOMROOT%</WorkingDirectory>
+          <CommandLine>-ExecutionPolicy Unrestricted -Command "&amp; '$File/Get-SCOMfileversions.ps1$'"</CommandLine>
+          <TimeoutSeconds>600</TimeoutSeconds>
+          <RequireOutput>true</RequireOutput>
+			<Files>
+				<File>
+					<Name>Get-SCOMfileversions.ps1</Name>
+					<Contents>
+#Thanks to Derek Har for providing me with the necessary information to embed a PowerShell script in a Management Pack: http://derekhar.blogspot.nl/search?q=powershell
+					
+#Get the local hostname
+$hostname = $env:COMPUTERNAME
+
+#Declare the function to get fileversions
+Function get-fileversion($description,$file)
+{
+	#Declare the desiredversion. Thanks to Kevin Greene for this info: http://kevingreeneitblog.blogspot.nl/             
+	#SCOM 2012 Cumulative Update 1 / Update Rollup 1 version = "7.0.8560.1021"
+	#SCOM 2012 Cumulative Update 2 / Update Rollup 2 version = "7.0.8560.1027" Console might not change version, not sure.
+	#SCOM 2012 Cumulative Update 3 / Update Rollup 3 version = "7.0.8560.1036"
+	#SCOM 2012 SP1 beta version = "7.0.8925.0"            
+	
+	#$desiredversion = "7.0.8560.1036"
+
+	IF((test-path $file) -ne $true) #If file is not present, no file version check will be performed
+	{
+		#write-host "Not present;$file"
+	}
+	ELSE #If file is present, file version check will be performend
+	{
+		#write-host "Present;$file"
+
+		#Get the fileversion
+		$fileversion = (Get-ItemProperty -Path $file | select -ExpandProperty VersionInfo).FileVersion
+		
+		#Define the outputformat
+		$output = "$hostname;$fileversion;$description;$file"
+
+		#IF($fileversion -eq $desiredversion) #If fileversion matches desired version, do not show in output
+		#{
+		#	#write-host $output
+		#}
+		#ELSE #If fileversion does not match desired version, show in output
+		#{
+		#	#Show only non compliant versions
+		#	$output | write-host
+		#}
+		
+		#Output fileversion always
+		$output | write-host
+	}
+}
+
+#Define the files to check
+
+#Files for SCOM 2012 Management Server
+get-fileversion "Management Server" "$env:ProgramFiles\System Center 2012\Operations Manager\Server\Microsoft.EnterpriseManagement.DataAccessService.OperationsManager.dll"
+get-fileversion "Management Server" "$env:ProgramFiles\System Center 2012\Operations Manager\Server\Microsoft.EnterpriseManagement.Modules.PowerShell.dll"
+get-fileversion "Management Server" "$env:ProgramFiles\System Center 2012\Operations Manager\Server\Microsoft.EnterpriseManagement.RuntimeService.dll"
+get-fileversion "Management Server" "$env:ProgramFiles\System Center 2012\Operations Manager\Server\MomIISModules.dll"
+
+#Files for SCOM 2012 Console
+get-fileversion "Console" "$env:ProgramFiles\System Center 2012\Operations Manager\Console\Microsoft.EnterpriseManagement.Presentation.Controls.dll"
+get-fileversion "Console" "$env:ProgramFiles\System Center 2012\Operations Manager\Console\Microsoft.EnterpriseManagement.Presentation.Core.dll"
+get-fileversion "Console" "$env:ProgramFiles\System Center 2012\Operations Manager\Console\Microsoft.EnterpriseManagement.Presentation.DataProviders.Library.dll"
+get-fileversion "Console" "$env:ProgramFiles\System Center 2012\Operations Manager\Microsoft.EnterpriseManagement.UI.ConsoleFramework.dll"
+get-fileversion "Console" "$env:ProgramFiles\System Center 2012\Operations Manager\Microsoft.Mom.UI.Components.dll"
+
+#Files for SCOM 2012 Web Console
+get-fileversion "Web Console" "$env:ProgramFiles\System Center 2012\Operations Manager\WebConsole\WebHost\bin\Microsoft.EnterpriseManagement.Presentation.Core.DLL"
+get-fileversion "Web Console" "$env:ProgramFiles\System Center 2012\Operations Manager\WebConsole\WebHost\Microsoft.EnterpriseManagement.Presentation.DataProviders.Library.dll"
+get-fileversion "Web Console" "$env:ProgramFiles\System Center 2012\Operations Manager\WebConsole\WebHost\Microsoft.EnterpriseManagement.Presentation.Security.Cryptography.dll"
+
+#Files for SCOM 2012 Gateway
+get-fileversion "Gateway" "$env:ProgramFiles\System Center Operations Manager\Gateway\Microsoft.EnterpriseManagement.Modules.PowerShell.dll"
+get-fileversion "Gateway" "$env:ProgramFiles\System Center Operations Manager\Gateway\MomIISModules.dll"
+get-fileversion "Gateway" "$env:ProgramFiles\System Center Operations Manager\Gateway\MOMScriptAPI.dll"
+
+#Files for SCOM 2012 Reporting
+get-fileversion "Reporting" "$env:ProgramFiles\System Center 2012\Operations Manager\Reporting\Tools\OpsMgrTraceTMFVer.Dll"
+get-fileversion "Reporting" "$env:ProgramFiles\System Center 2012\Operations Manager\Reporting\Tools\TraceFmtSM.exe"
+get-fileversion "Reporting" "$env:ProgramFiles\System Center 2012\Operations Manager\Reporting\Tools\TraceLogSM.exe"
+
+#Files for SCOM 2012 Agent
+get-fileversion "Agent" "$env:ProgramFiles\System Center Operations Manager\Agent\Microsoft.EnterpriseManagement.Modules.PowerShell.dll"
+get-fileversion "Agent" "$env:ProgramFiles\System Center Operations Manager\Agent\MomIISModules.dll"
+get-fileversion "Agent" "$env:ProgramFiles\System Center Operations Manager\Agent\MOMScriptAPI.dll"
+
+get-fileversion "Agent" "${env:ProgramFiles(x86)}\System Center Operations Manager\Agent\Microsoft.EnterpriseManagement.Modules.PowerShell.dll"
+get-fileversion "Agent" "${env:ProgramFiles(x86)}\System Center Operations Manager\Agent\MomIISModules.dll"
+get-fileversion "Agent" "${env:ProgramFiles(x86)}System Center Operations Manager\Agent\MOMScriptAPI.dll"
+
+					</Contents>
+					<Unicode>false</Unicode>
+				</File>
+			</Files>
+        </WriteAction>
+      </Task>
+    </Tasks>
+  </Monitoring>
+  <Presentation>
+    <Folders>
+      <Folder ID="Folder_b9b8fdef306d499bb37d492ffafad6e0" Accessibility="Public" ParentFolder="SystemCenter!Microsoft.SystemCenter.Monitoring.ViewFolder.Root" />
+    </Folders>
+  </Presentation>
+  <LanguagePacks>
+    <LanguagePack ID="ENU" IsDefault="false">
+      <DisplayStrings>
+        <DisplayString ElementID="BjornTasksPowershell">
+          <Name>Bjorn_Tasks_Powershell</Name>
+          <Description>Testing with PowerShell tasks</Description>
+        </DisplayString>
+        <DisplayString ElementID="Folder_b9b8fdef306d499bb37d492ffafad6e0">
+          <Name>Bjorn_Tasks_Powershell</Name>
+        </DisplayString>
+        <DisplayString ElementID="ConsoleTaskGeneratedByUI80cdf41ce7554e88bf9739c0756c00dc">
+          <Name>Bjorn_Tasks_Powershell_Get-SCOMfileversions</Name>
+        </DisplayString>
+      </DisplayStrings>
+    </LanguagePack>
+  </LanguagePacks>
+</ManagementPack>
